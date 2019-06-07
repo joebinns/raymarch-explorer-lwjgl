@@ -4,6 +4,8 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
+import java.io.IOException;
+
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 
@@ -55,8 +57,6 @@ public class Main implements Runnable{
 		glClearColor(1.0f, 0f, 0f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
 		System.out.println("OpenGl: " + glGetString(GL_VERSION));
-		
-
 	}
 	
 	public void run() {
