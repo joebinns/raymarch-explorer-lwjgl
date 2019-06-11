@@ -1,6 +1,11 @@
 package raymarchexplorer.graphics;
 
+/*
 import java.awt.image.BufferedImage;
+import java.io.FileInputStream;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
 
 public class Texture {
 	private int width, height;
@@ -15,8 +20,11 @@ public class Texture {
 		try {
 			BufferedImage image = ImageIO.read(new FileInputStream(path));
 			width = image.getWidth();
-			height = image.getHieght();			
+			height = image.getHeight();			
 		}
-		catch (IOException)
+		catch(IOException) {
+			
+		}
 	}
 }
+*/

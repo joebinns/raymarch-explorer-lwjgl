@@ -1,6 +1,7 @@
 package raymarchexplorer.graphics;
 
 import raymarchexplorer.utils.ShaderUtils;
+
 import static org.lwjgl.opengl.GL20.*;
 
 import static org.lwjgl.BufferUtils.*;
