@@ -246,7 +246,7 @@ public class Main implements Runnable{
 	}
 
 	/**
-	 * Create the full-scren quad shader.
+	 * Create the full-screen quad shader.
 	 *
 	 * @return that program id
 	 * @throws IOException
@@ -279,7 +279,10 @@ public class Main implements Runnable{
 	 */
 	private int createComputeProgram() throws IOException {
 		int program = glCreateProgram();
-		int cshader = createShader("demo01.glslcs", GL_COMPUTE_SHADER);
+		
+		//int cshader = createShader("demo01.glsl", GL_COMPUTE_SHADER);		
+		int cshader = createShader("raymarchfractal.glsl", GL_COMPUTE_SHADER);
+		
 		glAttachShader(program, cshader);
 		glLinkProgram(program);
 		int linked = glGetProgrami(program, GL_LINK_STATUS);
