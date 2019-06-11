@@ -281,7 +281,9 @@ public class Main implements Runnable{
 		int program = glCreateProgram();
 		
 		//int cshader = createShader("demo01.glsl", GL_COMPUTE_SHADER);		
-		int cshader = createShader("raymarchfractal.glsl", GL_COMPUTE_SHADER);
+		//int cshader = createShader("mandelbrot.glsl", GL_COMPUTE_SHADER);
+		int cshader = createShader("mandelbulb.glsl", GL_COMPUTE_SHADER);
+		//int cshader = createShader("converted.glsl", GL_COMPUTE_SHADER);
 		
 		glAttachShader(program, cshader);
 		glLinkProgram(program);
