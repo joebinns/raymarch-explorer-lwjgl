@@ -282,8 +282,9 @@ public class Main implements Runnable{
 		
 		//int cshader = createShader("demo01.glsl", GL_COMPUTE_SHADER);		
 		//int cshader = createShader("mandelbrot.glsl", GL_COMPUTE_SHADER);
-		int cshader = createShader("mandelbulb.glsl", GL_COMPUTE_SHADER);
+		//int cshader = createShader("mandelbulb.glsl", GL_COMPUTE_SHADER);
 		//int cshader = createShader("converted.glsl", GL_COMPUTE_SHADER);
+		int cshader = createShader("raymarching.glsl", GL_COMPUTE_SHADER);
 		
 		glAttachShader(program, cshader);
 		glLinkProgram(program);
@@ -308,6 +309,8 @@ public class Main implements Runnable{
 		glUseProgram(0);
 	}
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/**
 	 * Initialize the compute shader.
 	 */
@@ -317,11 +320,17 @@ public class Main implements Runnable{
 		glGetProgramiv(computeProgram, GL_COMPUTE_WORK_GROUP_SIZE, workGroupSize);
 		workGroupSizeX = workGroupSize.get(0);
 		workGroupSizeY = workGroupSize.get(1);
+
+		/* FOR 'demo01.glsl'
 		eyeUniform = glGetUniformLocation(computeProgram, "eye");
 		ray00Uniform = glGetUniformLocation(computeProgram, "ray00");
 		ray10Uniform = glGetUniformLocation(computeProgram, "ray10");
 		ray01Uniform = glGetUniformLocation(computeProgram, "ray01");
 		ray11Uniform = glGetUniformLocation(computeProgram, "ray11");
+		*/
+
+
+
 		glUseProgram(0);
 	}
 
