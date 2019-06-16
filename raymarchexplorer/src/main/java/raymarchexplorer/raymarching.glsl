@@ -20,6 +20,7 @@ float sphereSDF(vec3 samplePoint) {
     return length(samplePoint) - 1.0;
 }
 
+
 /**
  * Signed distance function describing the scene.
  * 
@@ -27,8 +28,39 @@ float sphereSDF(vec3 samplePoint) {
  * Sign indicates whether the point is inside or outside the surface,
  * negative indicating inside.
  */
+ /*
 float sceneSDF(vec3 samplePoint) {
     return sphereSDF(samplePoint);
+}
+*/
+
+float sceneSDF(vec3 pos) {
+    float Bailout = 5f;
+    float Iterations = 200f;
+    float Power = 3f;
+
+	vec3 z = pos;
+	float dr = 1.0;
+	float r = 0.0;
+	for (int i = 0; i < Iterations ; i++) {
+		r = length(z);
+		if (r>Bailout) break;
+		
+		// convert to polar coordinates
+		float theta = acos(z.z/r);
+		float phi = atan(z.y,z.x);
+		dr =  pow( r, Power-1.0)*Power*dr + 1.0;
+		
+		// scale and rotate the point
+		float zr = pow( r,Power);
+		theta = theta*Power;
+		phi = phi*Power;
+		
+		// convert back to cartesian coordinates
+		z = zr*vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
+		z+=pos;
+	}
+	return 0.5*log(r)*r/dr;
 }
 
 /**

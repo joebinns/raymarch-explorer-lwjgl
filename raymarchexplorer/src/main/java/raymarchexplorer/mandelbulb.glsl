@@ -114,7 +114,8 @@ float mod2(float x) {
 
 void main(void)
 {
-    vec2 uv = gl_GlobalInvocationID.xy / imageSize(img);
+    //vec2 uv = gl_GlobalInvocationID.xy / imageSize(img);
+    vec2 uv = gl_GlobalInvocationID.xy;
        
     // Background gradient
     vec4 result = mix(vec4(51,3,20,1),vec4(16,6,28,1),uv.y)/255.0;
