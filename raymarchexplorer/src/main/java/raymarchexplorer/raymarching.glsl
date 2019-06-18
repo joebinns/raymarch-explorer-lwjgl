@@ -29,20 +29,23 @@ float sphereSDF(vec3 samplePoint) {
  * negative indicating inside.
  */
  /*
-float sceneSDF(vec3 samplePoint) {
+float SceneSDF(vec3 samplePoint) {
     return sphereSDF(samplePoint);
 }
 */
 
-float sceneSDF(vec3 pos) {
-    float Bailout = 5f;
-    float Iterations = 200f;
+vec2 SceneSDF(vec3 pos) {
+    float Bailout = 2f;
+    float Iterations = 50f;
     float Power = 3f;
 
 	vec3 z = pos;
 	float dr = 1.0;
 	float r = 0.0;
-	for (int i = 0; i < Iterations ; i++) {
+    int iterations = 0;
+	for (int i = 0; i < Iterations; i++) {
+        iterations = i;
+
 		r = length(z);
 		if (r>Bailout) break;
 		
@@ -60,8 +63,18 @@ float sceneSDF(vec3 pos) {
 		z = zr*vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
 		z+=pos;
 	}
-	return 0.5*log(r)*r/dr;
+    float dst = 0.5*log(r)*r/dr;
+	return vec2(iterations, dst);
 }
+
+
+vec3 EstimateNormal(vec3 p) {
+    float x = SceneSDF(vec3(p.x+EPSILON,p.y,p.z)).y - SceneSDF(vec3(p.x-EPSILON,p.y,p.z)).y;
+    float y = SceneSDF(vec3(p.x,p.y+EPSILON,p.z)).y - SceneSDF(vec3(p.x,p.y-EPSILON,p.z)).y;
+    float z = SceneSDF(vec3(p.x,p.y,p.z+EPSILON)).y - SceneSDF(vec3(p.x,p.y,p.z-EPSILON)).y;
+    return normalize(vec3(x,y,z));
+}
+
 
 /**
  * Return the shortest distance from the eyepoint to the scene surface along
@@ -73,19 +86,24 @@ float sceneSDF(vec3 pos) {
  * start: the starting distance away from the eye
  * end: the max distance away from the eye to march before giving up
  */
-float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start, float end) {
+vec2 ShortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start, float end) {
     float depth = start;
     for (int i = 0; i < MAX_MARCHING_STEPS; i++) {
-        float dist = sceneSDF(eye + depth * marchingDirection);
+        vec2 sceneInfo = SceneSDF(eye + depth * marchingDirection);
+        float dist = sceneInfo.y;
+        float escapeIterations = sceneInfo.x;
+
         if (dist < EPSILON) {
-			return depth;
+			return vec2(depth, escapeIterations);
         }
+
         depth += dist;
+
         if (depth >= end) {
-            return end;
+            return vec2(end, 0);
         }
     }
-    return end;
+    return vec2(end, 0);
 }
 
 /**
@@ -105,15 +123,25 @@ void main(void)
 {
 	vec3 dir = rayDirection(45.0, vec2(imageSize(img)), gl_GlobalInvocationID.xy);
     vec3 eye = vec3(0.0, 0.0, 5.0);
-    float dist = shortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
-    
+    vec2 marchResult = ShortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
+    float dist = marchResult.x;
+    float escapeIterations = marchResult.y;
+
+    // Ray didn't hit anything
     if (dist > MAX_DIST - EPSILON) {
-        // Didn't hit anything
         vec4 fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-		return;
+        return;
     }
-    
-    vec4 fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+
+    // Ray has hit a surface
+    //vec3 normal = EstimateNormal(eye - dir * EPSILON * 2);  
+    //vec3 colourMix = clamp(normal, 0.0, 1.0);
+
+    //vec3 colourMix = normal;
+    //vec3 colourMix = clamp(vec3(escapeIterations, escapeIterations, escapeIterations), 0.0, 1.0);
+    vec3 colourMix = vec3(escapeIterations/50f, 0, escapeIterations/50f *0.5f);
+
+    vec4 fragColor = vec4(colourMix, 1.0);
 
     imageStore(img, ivec2(gl_GlobalInvocationID.xy), fragColor);
 }
