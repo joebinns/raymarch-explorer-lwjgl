@@ -6,18 +6,17 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_CORE_PROFILE;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_FORWARD_COMPAT;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_PROFILE;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_VISIBLE;
 import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
 import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
 import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
 import static org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor;
+import static org.lwjgl.glfw.GLFW.glfwGetTime;
 import static org.lwjgl.glfw.GLFW.glfwGetVideoMode;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
 import static org.lwjgl.glfw.GLFW.glfwPollEvents;
-import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
 import static org.lwjgl.glfw.GLFW.glfwSetKeyCallback;
 import static org.lwjgl.glfw.GLFW.glfwSetWindowPos;
 import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
@@ -27,7 +26,6 @@ import static org.lwjgl.glfw.GLFW.glfwSwapInterval;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.glfw.GLFW.glfwWindowHint;
 import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
-
 import static org.lwjgl.opengl.GL11.GL_BYTE;
 import static org.lwjgl.opengl.GL11.GL_FALSE;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
@@ -63,13 +61,13 @@ import static org.lwjgl.opengl.GL20.glCreateShader;
 import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
 import static org.lwjgl.opengl.GL20.glGetProgramInfoLog;
 import static org.lwjgl.opengl.GL20.glGetProgrami;
+import static org.lwjgl.opengl.GL20.glGetProgramiv;
 import static org.lwjgl.opengl.GL20.glGetShaderInfoLog;
 import static org.lwjgl.opengl.GL20.glGetShaderi;
 import static org.lwjgl.opengl.GL20.glGetUniformLocation;
 import static org.lwjgl.opengl.GL20.glLinkProgram;
 import static org.lwjgl.opengl.GL20.glShaderSource;
 import static org.lwjgl.opengl.GL20.glUniform1i;
-import static org.lwjgl.opengl.GL20.glUniform3f;
 import static org.lwjgl.opengl.GL20.glUseProgram;
 import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
 import static org.lwjgl.opengl.GL30.GL_RGBA32F;
@@ -82,8 +80,7 @@ import static org.lwjgl.opengl.GL42.glMemoryBarrier;
 import static org.lwjgl.opengl.GL43.GL_COMPUTE_SHADER;
 import static org.lwjgl.opengl.GL43.GL_COMPUTE_WORK_GROUP_SIZE;
 import static org.lwjgl.opengl.GL43.glDispatchCompute;
-
-import static org.lwjgl.opengl.GL45.*;
+import static org.lwjgl.opengl.GL20.glUniform1f;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,27 +88,24 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 import org.lwjgl.BufferUtils;
-import org.lwjgl.glfw.Callbacks;
-import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
+import raymarchexplorer.graphics.Camera;
+
 //import org.joml.*;
 
 import raymarchexplorer.input.Input;
-import raymarchexplorer.graphics.*;
-import raymarchexplorer.maths.*;
-import raymarchexplorer.utils.*;
-import raymarchexplorer.graphics.Shader;
+import raymarchexplorer.maths.Vector3f;
+import raymarchexplorer.utils.Util;
 
 public class Main implements Runnable{
 
 	private long window;
 	
-	private int width = 1280;
-	private int height = 720;
+	private int width = 1920;
+	private int height = 1080;
 	
 	//private Thread thread;
 	//private boolean running = false;
@@ -121,11 +115,15 @@ public class Main implements Runnable{
 	private int computeProgram;
 	private int quadProgram;
 
+	/*
 	private int eyeUniform;
 	private int ray00Uniform;
 	private int ray10Uniform;
 	private int ray01Uniform;
 	private int ray11Uniform;
+	*/
+	
+	private int timeValue;
 
 	private int workGroupSizeX;
 	private int workGroupSizeY;
@@ -136,6 +134,8 @@ public class Main implements Runnable{
 
 	//GLFWErrorCallback errFun;
 	//GLFWKeyCallback keyFun;
+
+
 	
 	public void start() {
 		/*
@@ -329,6 +329,8 @@ public class Main implements Runnable{
 		ray11Uniform = glGetUniformLocation(computeProgram, "ray11");
 		*/
 
+		timeValue = glGetUniformLocation(computeProgram, "timeValue");
+
 
 
 		glUseProgram(0);
@@ -358,6 +360,7 @@ public class Main implements Runnable{
 		glUseProgram(computeProgram);
 
 		/* Set viewing frustum corner rays in shader */
+		/*
 		glUniform3f(eyeUniform, camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
 		camera.getEyeRay(-1, -1, eyeRay);
 		glUniform3f(ray00Uniform, eyeRay.x, eyeRay.y, eyeRay.z);
@@ -367,6 +370,10 @@ public class Main implements Runnable{
 		glUniform3f(ray10Uniform, eyeRay.x, eyeRay.y, eyeRay.z);
 		camera.getEyeRay(1, 1, eyeRay);
 		glUniform3f(ray11Uniform, eyeRay.x, eyeRay.y, eyeRay.z);
+		*/
+
+		glUniform1f(timeValue, (float)glfwGetTime());
+		//glUniform1f(uStartTime, System.currentTimeMillis());
 
 		/* Bind level 0 of framebuffer texture as writable image in the shader. */
 		glBindImageTexture(0, tex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA32F);

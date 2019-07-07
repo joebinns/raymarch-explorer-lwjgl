@@ -7,11 +7,18 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(binding = 0, rgba32f) uniform writeonly image2D img;
 
-//Variables
+// Variables
 float EPSILON = 0.001f;
 const float MIN_DIST = 0.0;
 const float MAX_DIST = 100.0;
 int MAX_MARCHING_STEPS = 250;
+
+float Power = -5f;
+
+// Time
+float uTime = 0.0;
+uniform float timeValue;
+
 
 /**
  * Signed distance function for a sphere centered at the origin with radius 1.0;
@@ -36,8 +43,7 @@ float SceneSDF(vec3 samplePoint) {
 
 vec2 SceneSDF(vec3 pos) {
     float Bailout = 2f;
-    float Iterations = 50f;
-    float Power = 3f;
+    float Iterations = 15f;
 
 	vec3 z = pos;
 	float dr = 1.0;
@@ -55,7 +61,7 @@ vec2 SceneSDF(vec3 pos) {
 		dr =  pow( r, Power-1.0)*Power*dr + 1.0;
 		
 		// scale and rotate the point
-		float zr = pow( r,Power);
+		float zr = pow(r,Power);
 		theta = theta*Power;
 		phi = phi*Power;
 		
@@ -73,6 +79,84 @@ vec3 EstimateNormal(vec3 p) {
     float y = SceneSDF(vec3(p.x,p.y+EPSILON,p.z)).y - SceneSDF(vec3(p.x,p.y-EPSILON,p.z)).y;
     float z = SceneSDF(vec3(p.x,p.y,p.z+EPSILON)).y - SceneSDF(vec3(p.x,p.y,p.z-EPSILON)).y;
     return normalize(vec3(x,y,z));
+}
+
+
+/**
+ * Lighting contribution of a single point light source via Phong illumination.
+ * 
+ * The vec3 returned is the RGB color of the light's contribution.
+ *
+ * k_a: Ambient color
+ * k_d: Diffuse color
+ * k_s: Specular color
+ * alpha: Shininess coefficient
+ * p: position of point being lit
+ * eye: the position of the camera
+ * lightPos: the position of the light
+ * lightIntensity: color/intensity of the light
+ *
+ * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description
+ */
+vec3 phongContribForLight(vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 eye,
+                          vec3 lightPos, vec3 lightIntensity) {
+    vec3 N = EstimateNormal(p);
+    vec3 L = normalize(lightPos - p);
+    vec3 V = normalize(eye - p);
+    vec3 R = normalize(reflect(-L, N));
+    
+    float dotLN = dot(L, N);
+    float dotRV = dot(R, V);
+    
+    if (dotLN < 0.0) {
+        // Light not visible from this point on the surface
+        return vec3(0.0, 0.0, 0.0);
+    } 
+    
+    if (dotRV < 0.0) {
+        // Light reflection in opposite direction as viewer, apply only diffuse
+        // component
+        return lightIntensity * (k_d * dotLN);
+    }
+    return lightIntensity * (k_d * dotLN + k_s * pow(dotRV, alpha));
+}
+
+
+/**
+ * Lighting via Phong illumination.
+ * 
+ * The vec3 returned is the RGB color of that point after lighting is applied.
+ * k_a: Ambient color
+ * k_d: Diffuse color
+ * k_s: Specular color
+ * alpha: Shininess coefficient
+ * p: position of point being lit
+ * eye: the position of the camera
+ *
+ * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description
+ */
+vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 eye) {
+    const vec3 ambientLight = 0.5 * vec3(1.0, 1.0, 1.0);
+    vec3 color = ambientLight * k_a;
+    
+    vec3 light1Pos = vec3(4.0,
+                          2.0,
+                          4.0);
+    vec3 light1Intensity = vec3(0.4, 0.4, 0.4);
+    
+    color += phongContribForLight(k_d, k_s, alpha, p, eye,
+                                  light1Pos,
+                                  light1Intensity);
+    
+    vec3 light2Pos = vec3(2.0 * sin(0.37),
+                          2.0 * cos(0.37),
+                          2.0);
+    vec3 light2Intensity = vec3(0.4, 0.4, 0.4);
+    
+    color += phongContribForLight(k_d, k_s, alpha, p, eye,
+                                  light2Pos,
+                                  light2Intensity);    
+    return color;
 }
 
 
@@ -121,27 +205,87 @@ vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
 
 void main(void)
 {
-	vec3 dir = rayDirection(45.0, vec2(imageSize(img)), gl_GlobalInvocationID.xy);
-    vec3 eye = vec3(0.0, 0.0, 5.0);
+    // Time
+    Power += cos((timeValue * 0.1)) * 10;
+
+    vec3 colorPalette = vec3(0.5 * cos(timeValue) + 0.5, 0.5 * -cos(timeValue) + 0.5, 0.5 * cos(timeValue) + 0.5);
+
+
+
+
+    //vec3 lightDirection = vec3(0.0, 0.0, 1.0);
+
+	vec3 dir = rayDirection(-45.0, vec2(imageSize(img)), gl_GlobalInvocationID.xy);
+    vec3 eye = vec3(0.0, 0.0, -5.0); //NEED TO MAKE THIS = POSITION
     vec2 marchResult = ShortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
     float dist = marchResult.x;
     float escapeIterations = marchResult.y;
 
     // Ray didn't hit anything
+    /*
     if (dist > MAX_DIST - EPSILON) {
         vec4 fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         return;
     }
+    */
 
-    // Ray has hit a surface
-    //vec3 normal = EstimateNormal(eye - dir * EPSILON * 2);  
-    //vec3 colourMix = clamp(normal, 0.0, 1.0);
+    // The closest point on the surface to the eyepoint along the view ray  
+    vec3 p = eye + dist * dir;
+    
+    vec3 K_a = vec3(0.5, 0.5, 0.5);
+    vec3 K_d = vec3(1.00, 0.45, 0.25);
+    vec3 K_s = vec3(0.45, 0.45, 0.45);
 
-    //vec3 colourMix = normal;
-    //vec3 colourMix = clamp(vec3(escapeIterations, escapeIterations, escapeIterations), 0.0, 1.0);
-    vec3 colourMix = vec3(escapeIterations/50f, 0, escapeIterations/50f *0.5f);
+    float shininess = 10.0;
+    
 
-    vec4 fragColor = vec4(colourMix, 1.0);
+    //vec3 color = phongIllumination(K_a, K_d, K_s, shininess, p, eye);
+
+    //vec3 normal = EstimateNormal(eye - dir * EPSILON * 2);
+    //vec3 newVec = vec3(normal.x * 0.5 + 0.5, normal.y * 0.5 + 0.5, normal.z * 0.5 + 0.5); 
+    //vec3 color = clamp(vec3(dot(newVec, lightDirection)), 0.0 , 1.0);
+
+    //vec3 colourMixA = clamp(vec3(escapeIterations/49.0, escapeIterations/49.0, escapeIterations/49.0), 0.0, 1.0);
+
+    //float colourMixRatio = 0.5;
+    //color = clamp(colourMixA * colourMixRatio + color * (1 - colourMixRatio), 0.0, 1.0);
+
+    //color = (color);
+
+
+    // NEW LIGHTING
+    // http://blog.hvidtfeldts.net/index.php/2011/08/distance-estimated-3d-fractals-ii-lighting-and-coloring/
+    // https://www.cs.cmu.edu/~kmcrane/Projects/QuaternionJulia/paper.pdf
+    // PhongIllumination, Shadows
+    // Phong
+    vec3 color = phongIllumination(K_a, K_d, K_s, shininess, p, eye);
+
+    // Shadows
+    //  The shadow ray will start at the intersection point and go
+    //  towards the point light. We initially move the ray origin
+    //  a little bit along this direction so that we don’t mistakenly
+    //  find an intersection with the same point again.
+    //float3 L = normalize( light - rO );
+    //rO += N*epsilon*2.0;
+    //dist = intersectQJulia( rO, L, mu, maxIterations, epsilon );
+    //  Again, if our estimate of the distance to the set is small, we say
+    //  that there was a hit. In this case it means that the point is in
+    //  shadow and should be given darker shading.
+    //if( dist < epsilon )
+    //{
+    //    color.rgb *= 0.4; // (darkening the shaded value is not really correct, but looks good)
+    //}
+
+    float colorComp = (escapeIterations/16.0);
+    if (colorComp != vec3(0.0, 0.0, 0.0)){
+        color = (colorPalette * colorComp * 0.5) + (color * colorComp * 0.5);
+    }
+    else{
+        color = (colorPalette * colorComp);
+    }
+
+
+    vec4 fragColor = vec4(color, 1.0);
 
     imageStore(img, ivec2(gl_GlobalInvocationID.xy), fragColor);
 }
