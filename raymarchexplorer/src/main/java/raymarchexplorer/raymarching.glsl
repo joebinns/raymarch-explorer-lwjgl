@@ -2,18 +2,18 @@
 
 
 #version 450
-#extension GL_KHR_vulkan_glsl : enable
+//#extension GL_KHR_vulkan_glsl : enable
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(binding = 0, rgba32f) uniform writeonly image2D img;
 
 // Variables
-float EPSILON = 0.001f;
+float EPSILON = 0.001;
 const float MIN_DIST = 0.0;
 const float MAX_DIST = 100.0;
 int MAX_MARCHING_STEPS = 250;
 
-float Power = -5f;
+float Power = -5.0;
 
 // Time
 float uTime = 0.0;
@@ -42,8 +42,8 @@ float SceneSDF(vec3 samplePoint) {
 */
 
 vec2 SceneSDF(vec3 pos) {
-    float Bailout = 2f;
-    float Iterations = 15f;
+    float Bailout = 2.0;
+    float Iterations = 15.0;
 
 	vec3 z = pos;
 	float dr = 1.0;
@@ -277,7 +277,7 @@ void main(void)
     //}
 
     float colorComp = (escapeIterations/16.0);
-    if (colorComp != vec3(0.0, 0.0, 0.0)){
+    if (colorComp, colorComp, colorComp != 0.0){
         color = (colorPalette * colorComp * 0.5) + (color * colorComp * 0.5);
     }
     else{
