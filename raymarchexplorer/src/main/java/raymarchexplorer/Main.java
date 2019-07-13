@@ -160,7 +160,8 @@ public class Main implements Runnable{
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		
-		window = glfwCreateWindow(width, height, "RaymarchExplorer", MemoryUtil.NULL, MemoryUtil.NULL);		
+		window = glfwCreateWindow(width, height, "RaymarchExplorer", glfwGetPrimaryMonitor(), MemoryUtil.NULL);
+
 		if (window == MemoryUtil.NULL) {
 			//TODO: handle
 			throw new AssertionError("Failed to create the GLFW window");
